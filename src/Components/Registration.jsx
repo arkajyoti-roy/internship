@@ -5,7 +5,7 @@ import { auth, db } from "./firebase";
 import { setDoc, doc } from "firebase/firestore";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaFileAlt, FaFolder, FaFolderOpen } from "react-icons/fa";
 
 import "./Dis.css";
 // import Google from "./Google";
@@ -146,18 +146,62 @@ const Registration = () => {
     }
   };
 
+  // Background shape animations
+  const backgroundShapes = Array(12).fill().map((_, index) => (
+    <div 
+      key={index}
+      className="absolute pointer-events-none" 
+      style={{
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        opacity: 0.07,
+        transform: `scale(${Math.random() * 0.5 + 0.5})`,
+        animation: `float ${Math.random() * 10 + 20}s infinite ease-in-out`,
+        animationDelay: `${Math.random() * 5}s`
+      }}
+    >
+      {index % 3 === 0 ? (
+        <FaFileAlt size={60} className="text-indigo-600" />
+      ) : index % 3 === 1 ? (
+        <FaFolder size={70} className="text-blue-600" />
+      ) : (
+        <FaFolderOpen size={65} className="text-indigo-400" />
+      )}
+    </div>
+  ));
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Animated Background Shapes */}
+      {backgroundShapes}
+      
+      {/* Abstract Waves */}
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-r from-indigo-500/10 to-blue-500/10 transform -skew-y-3"></div>
+      <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 transform skew-y-3"></div>
+      
+      <div className="max-w-md w-full space-y-8 relative z-10">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-indigo-600">Document Manager</h1>
+          <div className="flex items-center justify-center">
+            <div className="bg-indigo-600 p-3 rounded-full shadow-lg">
+              <FaFileAlt className="h-8 w-8 text-white" />
+            </div>
+          </div>
+          <h1 className="mt-4 text-3xl font-bold text-indigo-600">Document Manager</h1>
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Create your account</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get started with Document Manager
+            Store, organize, and access your documents securely
           </p>
         </div>
         
-        <div className="bg-white p-8 rounded-lg shadow-lg">
+        <div className="bg-white p-8 rounded-lg shadow-lg relative">
+          {/* Decorative Corner */}
+          <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
+            <div className="bg-indigo-100 rotate-45 transform origin-bottom-left w-28 h-28 -translate-y-14 translate-x-14"></div>
+          </div>
+          <div className="absolute top-0 right-0 p-2">
+            <FaFolder className="h-5 w-5 text-indigo-600" />
+          </div>
+          
           <form onSubmit={register} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -272,7 +316,7 @@ const Registration = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
               >
                 {loading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -304,12 +348,46 @@ const Registration = () => {
           
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{" "}
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
               Login
             </Link>
           </p>
         </div>
+        
+        {/* Document Manager Features */}
+        <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
+            <div className="flex justify-center">
+              <FaFileAlt className="h-5 w-5 text-indigo-500" />
+            </div>
+            <p className="mt-1 text-xs font-medium text-gray-700">Store Documents</p>
+          </div>
+          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
+            <div className="flex justify-center">
+              <FaFolder className="h-5 w-5 text-indigo-500" />
+            </div>
+            <p className="mt-1 text-xs font-medium text-gray-700">Organize Files</p>
+          </div>
+          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
+            <div className="flex justify-center">
+              <FaFolderOpen className="h-5 w-5 text-indigo-500" />
+            </div>
+            <p className="mt-1 text-xs font-medium text-gray-700">Secure Access</p>
+          </div>
+        </div>
       </div>
+      
+      {/* Add CSS for animations */}
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
+        }
+      `}</style>
     </div>
   );
 };
