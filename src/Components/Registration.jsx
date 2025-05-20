@@ -66,31 +66,31 @@ const Registration = () => {
     }
   }, [password]);
 
-  // Form validation
+ 
   const validateForm = () => {
     let isValid = true;
     const newErrors = { name: "", email: "", password: "", phone: "" };
     
-    // Name validation
+    
     if (!name.trim()) {
       newErrors.name = "Please enter your full name";
       isValid = false;
     }
     
-    // Email validation
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       newErrors.email = "Please enter a valid email address";
       isValid = false;
     }
     
-    // Password validation
-    if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    
+    if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
       isValid = false;
     }
     
-    // Phone validation
+    
     const phoneRegex = /^\d{10,15}$/;
     if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
       newErrors.phone = "Please enter a valid phone number";
@@ -146,7 +146,7 @@ const Registration = () => {
     }
   };
 
-  // Background shape animations
+  
   const backgroundShapes = Array(12).fill().map((_, index) => (
     <div 
       key={index}
@@ -172,10 +172,10 @@ const Registration = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Animated Background Shapes */}
+     
       {backgroundShapes}
       
-      {/* Abstract Waves */}
+     
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-r from-indigo-500/10 to-blue-500/10 transform -skew-y-3"></div>
       <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 transform skew-y-3"></div>
       
@@ -194,7 +194,7 @@ const Registration = () => {
         </div>
         
         <div className="bg-white p-8 rounded-lg shadow-lg relative">
-          {/* Decorative Corner */}
+         
           <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
             <div className="bg-indigo-100 rotate-45 transform origin-bottom-left w-28 h-28 -translate-y-14 translate-x-14"></div>
           </div>
@@ -340,10 +340,8 @@ const Registration = () => {
               </div>
             </div>
             
-            <div className="mt-6">
-              {/* <Google /> */}
-              {/* Uncomment when Google component is ready */}
-            </div>
+            {/* <div className="mt-6">
+            </div> */}
           </div>
           
           <p className="mt-6 text-center text-sm text-gray-600">
@@ -354,7 +352,9 @@ const Registration = () => {
           </p>
         </div>
         
-        {/* Document Manager Features */}
+       
+
+
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
             <div className="flex justify-center">
@@ -377,7 +377,9 @@ const Registration = () => {
         </div>
       </div>
       
-      {/* Add CSS for animations */}
+    
+
+
       <style jsx>{`
         @keyframes float {
           0%, 100% {
