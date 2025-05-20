@@ -25,7 +25,7 @@ import { v4 } from "uuid";
 import { toast } from "react-toastify";
 import ImgLoader from "./ImgLoader";
 import NoImg from "./NoImg";
-import NewAdd from "./NewAdd";
+// import NewAdd from "./NewAdd";
 
 const Display = () => {
   const [userDetails, setUserDetails] = useState(null);
@@ -40,7 +40,7 @@ const Display = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
-  // Set initial loading state
+ 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowFirstDiv(false);
@@ -48,7 +48,7 @@ const Display = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Get user details from localStorage
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -56,19 +56,12 @@ const Display = () => {
     }
   }, []);
 
-  // Fetch data on component mount
+  
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Periodic fetch images - commented out for now to avoid unnecessary requests
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     fetchImages();
-  //   }, 30000);
-  //   return () => clearInterval(interval);
-  // }, []);
-
+ 
   const fetchData = async () => {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -99,11 +92,11 @@ const Display = () => {
     const file = e.target.files[0];
     if (file) {
       setImg(file);
-      // Create a preview URL
+    
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
       
-      // Auto-fill image name based on file name (without extension)
+     
       const fileName = file.name.split('.').slice(0, -1).join('.');
       setImageName(fileName);
     }
@@ -179,7 +172,7 @@ const Display = () => {
         });
       });
       
-      // Sort by newest first
+     
       urls.sort((a, b) => b.timestamp - a.timestamp);
       setImgUrl(urls);
     } catch (error) {
@@ -206,16 +199,16 @@ const Display = () => {
     }
 
     try {
-      // Try to delete from storage first
+     
       try {
         const imgRef = ref(imageDb, image.url);
         await deleteObject(imgRef);
       } catch (storageError) {
         console.error("Error deleting from storage:", storageError);
-        // Continue anyway, as we can still delete the database entry
+       
       }
 
-      // Delete from database
+  
       await deleteDoc(doc(db, "Images", image.id));
       setImgUrl(imgUrl.filter((item) => item.id !== image.id));
       
@@ -288,11 +281,11 @@ const Display = () => {
     <div className="min-h-screen bg-gray-50">
       {userDetails ? (
         <>
-          {/* Header */}
+        
           <header className="bg-white shadow-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex justify-between items-center">
-                {/* Logo and App Name */}
+             
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <svg
@@ -315,7 +308,7 @@ const Display = () => {
                   </div>
                 </div>
                 
-                {/* User welcome and controls */}
+               
                 <div className="flex items-center space-x-4">
                   <div className="hidden md:block">
                     <span className="text-gray-700 font-medium">
@@ -323,7 +316,7 @@ const Display = () => {
                     </span>
                   </div>
                   
-                  {/* Upload button */}
+                  
                   <button 
                     onClick={handleShowClick}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -345,7 +338,7 @@ const Display = () => {
                     Upload
                   </button>
                   
-                  {/* Logout button */}
+                 
                   <button 
                     onClick={handleLogout}
                     className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -371,11 +364,11 @@ const Display = () => {
             </div>
           </header>
 
-          {/* Main Content */}
+          
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Search and view controls */}
+           
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
-              {/* Search box */}
+             
               <div className="relative w-full sm:w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg 
@@ -402,7 +395,7 @@ const Display = () => {
                 />
               </div>
 
-              {/* View mode toggle */}
+            
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">View:</span>
                 <button
@@ -446,7 +439,7 @@ const Display = () => {
               </div>
             </div>
 
-            {/* Document gallery */}
+           
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <ImgLoader />
@@ -605,7 +598,7 @@ const Display = () => {
             )}
           </main>
 
-          {/* Footer */}
+         
           <footer className="bg-white mt-10 border-t border-gray-200">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
               <p className="text-center text-sm text-gray-500">
@@ -614,7 +607,7 @@ const Display = () => {
             </div>
           </footer>
 
-          {/* Upload Modal */}
+       
           {isDivVisible && (
             <div className="fixed inset-0 overflow-y-auto z-50">
               <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
