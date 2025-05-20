@@ -17,7 +17,6 @@ import { imageDb } from "./firebase";
 
 import {
   getDownloadURL,
-  listAll,
   ref,
   uploadBytes,
   deleteObject,
@@ -33,29 +32,43 @@ const Display = () => {
   const [img, setImg] = useState(null);
   const [imgUrl, setImgUrl] = useState([]);
   const [imageName, setImageName] = useState("");
+  const [previewUrl, setPreviewUrl] = useState(null);
   const navigate = useNavigate();
   const [isDivVisible, setIsDivVisible] = useState(false);
   const [showFirstDiv, setShowFirstDiv] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
+
+  // Set initial loading state
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowFirstDiv(false);
     }, 2900);
     return () => clearTimeout(timer);
   }, []);
+
+  // Get user details from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUserDetails(JSON.parse(storedUser));
     }
   }, []);
+
+  // Fetch data on component mount
   useEffect(() => {
     fetchData();
-  // },40000);
   }, []);
-  useEffect(()=>{
-    fetchImages()
-  },30000 )
+
+  // Periodic fetch images - commented out for now to avoid unnecessary requests
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     fetchImages();
+  //   }, 30000);
+  //   return () => clearInterval(interval);
+  // }, []);
+
   const fetchData = async () => {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -70,25 +83,40 @@ const Display = () => {
       }
     });
   };
+
   const handleShowClick = () => {
     setIsDivVisible(true);
   };
-  const agn = () => {
-    handleShowClick();
-  };
+
   const handleHideClick = () => {
     setIsDivVisible(false);
     setImageName("");
+    setPreviewUrl(null);
+    setImg(null);
   };
-  const handleClick = async () => {
-    handleHideClick();
-    toast.success("Uploading!", {
-      position: "top-right",
-    });
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImg(file);
+      // Create a preview URL
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      
+      // Auto-fill image name based on file name (without extension)
+      const fileName = file.name.split('.').slice(0, -1).join('.');
+      setImageName(fileName);
+    }
+  };
+
+  const handleUpload = async () => {
     if (!imageName.trim() || !img) {
-      alert("Both image name and image file are required!");
+      toast.error("Both image name and image file are required!", {
+        position: "top-right",
+      });
       return;
     }
+
     const allowedFormats = [
       "image/jpeg",
       "image/png",
@@ -96,71 +124,116 @@ const Display = () => {
       "image/webp",
       "image/svg+xml",
     ];
+    
     if (!allowedFormats.includes(img.type)) {
-      alert(
-        "Invalid file format. Please upload an image in .jpg, .jpeg, .png, .gif, .webp, or .svg format."
-      );
+      toast.error("Invalid file format. Please upload an image in .jpg, .jpeg, .png, .gif, .webp, or .svg format.", {
+        position: "top-right",
+      });
       return;
     }
-    const imgRef = ref(imageDb, `iimps/${auth.currentUser.uid}/${v4()}`);
-    await uploadBytes(imgRef, img);
-    const url = await getDownloadURL(imgRef);
-    await addDoc(collection(db, "Images"), {
-      uid: auth.currentUser.uid,
-      imageName: imageName.trim(),
-      imageUrl: url,
-    });
-    fetchImages(auth.currentUser.uid);
-    toast.success("Uploaded Successfully!", {
+
+    handleHideClick();
+    toast.info("Uploading...", {
       position: "top-right",
     });
-    // let nam = setImageName;
-    setImageName("");
-    setImg(null);
+
+    try {
+      const imgRef = ref(imageDb, `iimps/${auth.currentUser.uid}/${v4()}`);
+      await uploadBytes(imgRef, img);
+      const url = await getDownloadURL(imgRef);
+      await addDoc(collection(db, "Images"), {
+        uid: auth.currentUser.uid,
+        imageName: imageName.trim(),
+        imageUrl: url,
+        timestamp: new Date().getTime(),
+      });
+      
+      fetchImages(auth.currentUser.uid);
+      toast.success("Uploaded Successfully!", {
+        position: "top-right",
+      });
+      
+      setImageName("");
+      setImg(null);
+      setPreviewUrl(null);
+    } catch (error) {
+      console.error("Error uploading:", error);
+      toast.error("Upload failed: " + error.message, {
+        position: "top-right",
+      });
+    }
   };
+
   const fetchImages = async (uid) => {
     setLoading(true);
-    const q = query(collection(db, "Images"), where("uid", "==", uid));
-    const querySnapshot = await getDocs(q);
-    const urls = [];
-    querySnapshot.forEach((doc) => {
-      urls.push({
-        id: doc.id,
-        url: doc.data().imageUrl,
-        name: doc.data().imageName,
+    try {
+      const q = query(collection(db, "Images"), where("uid", "==", uid));
+      const querySnapshot = await getDocs(q);
+      const urls = [];
+      querySnapshot.forEach((doc) => {
+        urls.push({
+          id: doc.id,
+          url: doc.data().imageUrl,
+          name: doc.data().imageName,
+          timestamp: doc.data().timestamp || 0,
+        });
       });
-    });
-    setImgUrl(urls);
-    setLoading(false);
+      
+      // Sort by newest first
+      urls.sort((a, b) => b.timestamp - a.timestamp);
+      setImgUrl(urls);
+    } catch (error) {
+      console.error("Error fetching images:", error);
+      toast.error("Failed to load images", {
+        position: "top-right",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
   const handleDelete = async (image) => {
     if (!image.url) {
       console.error("Invalid URL:", image.url);
-      alert("Invalid URL. Please try again.");
+      toast.error("Invalid URL. Please try again.", {
+        position: "top-right",
+      });
       return;
     }
+
+    if (!window.confirm(`Are you sure you want to delete "${image.name}"?`)) {
+      return;
+    }
+
     try {
-      const imgRef = ref(imageDb, image.url);
+      // Try to delete from storage first
+      try {
+        const imgRef = ref(imageDb, image.url);
+        await deleteObject(imgRef);
+      } catch (storageError) {
+        console.error("Error deleting from storage:", storageError);
+        // Continue anyway, as we can still delete the database entry
+      }
 
-      await deleteObject(imgRef);
-
+      // Delete from database
       await deleteDoc(doc(db, "Images", image.id));
-
       setImgUrl(imgUrl.filter((item) => item.id !== image.id));
+      
       toast.success("File deleted successfully", {
         position: "top-right",
       });
     } catch (error) {
       console.error("Error deleting file:", error);
-      alert("Error deleting file: " + error.message);
+      toast.error("Error deleting file: " + error.message, {
+        position: "top-right",
+      });
     }
   };
 
   const handleDownload = async (url, name) => {
-    toast.success("Download is Starting", {
+    toast.info("Download is starting...", {
       position: "top-right",
     });
-    name = imageName;
     
     try {
       const response = await fetch(`https://doc-man.vercel.app/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`);
@@ -172,7 +245,7 @@ const Display = () => {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = name;
+      a.download = name || "download";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -187,325 +260,502 @@ const Display = () => {
       });
     }
   };
-  
-
-
-  // const handleDownload = async (url, name) => {
-  //   toast.success("Download is Starting", {
-  //     position: "top-right",
-  //   });
-  
-  //   try {
-  //     const response = await fetch(`https://doc-man.vercel.app/download?url=${encodeURIComponent(url)}`);
-      
-  //     if (!response.ok) {
-  //       throw new Error(`Network response was not ok: ${response.statusText}`);
-  //     }
-      
-  //     const blob = await response.blob();
-  //     const downloadUrl = window.URL.createObjectURL(blob);
-      
-  //     const a = document.createElement("a");
-  //     a.href = downloadUrl;
-  //     a.download = name;
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     a.remove();
-  
-  //     toast.success("Download Complete!", {
-  //       position: "top-right",
-  //     });
-  //   } catch (error) {
-  //     console.error("Error downloading file:", error);
-  //     toast.error("Error downloading file: " + error.message, {
-  //       position: "top-right",
-  //     });
-  //   }
-  // };
-
-
-  
-  
-  // setTimeout(()=>{
-  //   handelLogout()
-  // }, 280000)
-  
-
-  
-  const handelLogout = async () => {
+ 
+  const handleLogout = async () => {
     try {
       await auth.signOut();
-      toast.success("Logout Successfully!", {
+      toast.success("Logged out successfully!", {
         position: "top-right",
       });
+      localStorage.removeItem("user");
       setTimeout(() => {
         navigate("/login");
       }, 1000);
     } catch (error) {
       console.error(error.message);
+      toast.error("Logout failed: " + error.message, {
+        position: "top-right",
+      });
     }
   };
-  const containerStyle = {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh",
-    backgroundColor: "black",
-  };
+
+  // Filter images based on search
+  const filteredImages = imgUrl.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <>
-      <div>
-        {userDetails ? (
-          <>
-            <header className="text-gray-600 body-font">
-              <div className=" shad gap-56 mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center">
-                <a className="flex title-font font-medium lft items-center text-gray-900 mb-4 md:mb-0">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="w-10 h-10 text-white p-2 bg-indigo-500 rounded-full"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                  </svg>
-                  <span className="ml-3 dc text-xl">Document Manager</span>
-                </a>
-                <h1 className="font-semibold nc text-2xl text-black">
-                  Hello, {userDetails.name}!
-                </h1>
-                <div className="flex bt flex-row gap-44">
-                  <div className="up">
-                    <button onClick={handleShowClick}>
-                      <svg
-                        height="2.5em"
-                        viewBox="0 0 1024.00 1024.00"
-                        className="icon"
-                        version="1.1"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="#000000"
-                        transform="rotate(0)matrix(1, 0, 0, 1, 0, 0)"
-                        stroke="#000000"
-                        strokeWidth="0.01024"
-                      >
-                        <g id="SVGRepo_bgCarrier" strokeWidth="0" />
-                        <g
-                          id="SVGRepo_tracerCarrier"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          stroke="#fcfcfc"
-                          strokeWidth="16.384"
-                        >
-                          <path
-                            d="M819.5 783.7h-51.3c-16.6 0-30 13.4-30 30s13.4 30 30 30h51.3c16.6 0 30-13.4 30-30s-13.5-30-30-30zM665.7 783.7H143.9c-16.6 0-30 13.4-30 30s13.4 30 30 30h521.8c16.6 0 30-13.4 30-30s-13.5-30-30-30z"
-                            fill="#657671"
-                          />
-                          <path
-                            d="M834.7 940.7H230.1c-23.9 0-43.5-19.6-43.5-43.5s19.6-43.5 43.5-43.5h604.6c23.9 0 43.5 19.6 43.5 43.5s-19.5 43.5-43.5 43.5z"
-                            fill="#9a7f74"
-                          />
-                          <path
-                            d="M791.8 409.6H665.7c-16.6 0-30 13.4-30 30s13.4 30 30 30h126.2c41 0 74.4 33.4 74.4 74.4v281.3c0 41-33.4 74.4-74.4 74.4H232.4c-41 0-74.4-33.4-74.4-74.4V544c0-41 33.4-74.4 74.4-74.4h139.3c16.6 0 30-13.4 30-30s-13.4-30-30-30H232.4C158.3 409.6 98 469.9 98 544v281.3c0 74.1 60.3 134.4 134.4 134.4h559.4c74.1 0 134.4-60.3 134.4-134.4V544c0-74.1-60.3-134.4-134.4-134.4z"
-                            fill="#000000"
-                          />
-                          <path
-                            d="M362.3 272.1l118.8-118.8v550.9c0 16.6 13.4 30 30 30s30-13.4 30-30V153.3l118.8 118.8c5.9 5.9 13.5 8.8 21.2 8.8s15.4-2.9 21.2-8.8c11.7-11.7 11.7-30.7 0-42.4L552.6 80c-11.1-11.1-25.9-17.2-41.5-17.2-15.7 0-30.4 6.1-41.5 17.2L319.9 229.7c-11.7 11.7-11.7 30.7 0 42.4s30.7 11.7 42.4 0z"
-                            fill="#000000"
-                          />
-                        </g>
-                        <g id="SVGRepo_iconCarrier">
-                          <path
-                            d="M819.5 783.7h-51.3c-16.6 0-30 13.4-30 30s13.4 30 30 30h51.3c16.6 0 30-13.4 30-30s-13.5-30-30-30zM665.7 783.7H143.9c-16.6 0-30 13.4-30 30s13.4 30 30 30h521.8c16.6 0 30-13.4 30-30s-13.5-30-30-30z"
-                            fill="#657671"
-                          />
-                          <path
-                            d="M834.7 940.7H230.1c-23.9 0-43.5-19.6-43.5-43.5s19.6-43.5 43.5-43.5h604.6c23.9 0 43.5 19.6 43.5 43.5s-19.5 43.5-43.5 43.5z"
-                            fill="#9a7f74"
-                          />
-                          <path
-                            d="M791.8 409.6H665.7c-16.6 0-30 13.4-30 30s13.4 30 30 30h126.2c41 0 74.4 33.4 74.4 74.4v281.3c0 41-33.4 74.4-74.4 74.4H232.4c-41 0-74.4-33.4-74.4-74.4V544c0-41 33.4-74.4 74.4-74.4h139.3c16.6 0 30-13.4 30-30s-13.4-30-30-30H232.4C158.3 409.6 98 469.9 98 544v281.3c0 74.1 60.3 134.4 134.4 134.4h559.4c74.1 0 134.4-60.3 134.4-134.4V544c0-74.1-60.3-134.4-134.4-134.4z"
-                            fill="#000000"
-                          />
-                          <path
-                            d="M362.3 272.1l118.8-118.8v550.9c0 16.6 13.4 30 30 30s30-13.4 30-30V153.3l118.8 118.8c5.9 5.9 13.5 8.8 21.2 8.8s15.4-2.9 21.2-8.8c11.7-11.7 11.7-30.7 0-42.4L552.6 80c-11.1-11.1-25.9-17.2-41.5-17.2-15.7 0-30.4 6.1-41.5 17.2L319.9 229.7c-11.7 11.7-11.7 30.7 0 42.4s30.7 11.7 42.4 0z"
-                            fill="#000000"
-                          />
-                        </g>
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="lo">
-                    <button
-                      onClick={handelLogout}
-                      className="inline-flex items-center border-0 py-1 px-3 focus:outline-none hover:text-white hover:bg-red-600 rounded text-base mt-4 md:mt-0"
+    <div className="min-h-screen bg-gray-50">
+      {userDetails ? (
+        <>
+          {/* Header */}
+          <header className="bg-white shadow-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex justify-between items-center">
+                {/* Logo and App Name */}
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-10 w-10 text-white p-2 bg-indigo-600 rounded-lg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <span className="sv">Log Out</span>
-                      <svg
-                        className="nml"
-                        fill="#000000"
-                        height="2.2em"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M4,12a1,1,0,0,0,1,1h7.59l-2.3,2.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0l4-4a1,1,0,0,0,.21-.33,1,1,0,0,0,0-.76,1,1,0,0,0-.21-.33l-4-4a1,1,0,1,0-1.42,1.42L12.59,11H5A1,1,0,0,0,4,12ZM17,2H7A3,3,0,0,0,4,5V8A1,1,0,0,0,6,8V5A1,1,0,0,1,7,4H17a1,1,0,0,1,1,1V19a1,1,0,0,1-1,1H7a1,1,0,0,1-1-1V16a1,1,0,0,0-2,0v3a3,3,0,0,0,3,3H17a3,3,0,0,0,3-3V5A3,3,0,0,0,17,2Z" />
-                      </svg>
-                    </button>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3 text-xl font-bold text-gray-900">
+                    Document Manager
                   </div>
                 </div>
+                
+                {/* User welcome and controls */}
+                <div className="flex items-center space-x-4">
+                  <div className="hidden md:block">
+                    <span className="text-gray-700 font-medium">
+                      Welcome, <span className="font-bold text-indigo-600">{userDetails.name}</span>
+                    </span>
+                  </div>
+                  
+                  {/* Upload button */}
+                  <button 
+                    onClick={handleShowClick}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5 mr-2" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" 
+                      />
+                    </svg>
+                    Upload
+                  </button>
+                  
+                  {/* Logout button */}
+                  <button 
+                    onClick={handleLogout}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5 mr-2" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" 
+                      />
+                    </svg>
+                    Logout
+                  </button>
+                </div>
               </div>
-            </header>
-            <br />
-            <br />
-            <br />
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Search and view controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
+              {/* Search box */}
+              <div className="relative w-full sm:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-gray-400" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search documents..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              {/* View mode toggle */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">View:</span>
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-md ${viewMode === "grid" ? "bg-indigo-100 text-indigo-600" : "bg-white text-gray-500"}`}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" 
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-md ${viewMode === "list" ? "bg-indigo-100 text-indigo-600" : "bg-white text-gray-500"}`}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M4 6h16M4 12h16M4 18h16" 
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Document gallery */}
             {loading ? (
-              <div className="loader2">
+              <div className="flex justify-center items-center h-64">
                 <ImgLoader />
               </div>
             ) : (
-              <div className="nam">
-                {imgUrl.length === 0 ? (
-                  <div className="noimg">
+              <>
+                {filteredImages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-8">
                     <NoImg />
-                    <button onClick={agn}>
-                      <NewAdd />
+                    <p className="text-gray-500 mt-4">No images found</p>
+                    <button 
+                      onClick={handleShowClick} 
+                      className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5 mr-2" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M12 4v16m8-8H4" 
+                        />
+                      </svg>
+                      Add New
                     </button>
                   </div>
                 ) : (
-                  imgUrl.map((item, index) => (
-                    <div className="nam2" key={index}>
-                      <img
-                        className="impd"
-                        src={item.url}
-                        alt={`Uploaded ${index}`}
-                      />
-                      <p className="npm">{item.name}</p>
-                      <div className="flex gap-5 pt-4 justify-between">
-                        <button
-                          onClick={() => handleDownload(item.url)}
-                          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            fill="none"
-                            className="w-5 h-5 mr-2 -ml-1"
-                          >
-                            <path
-                              d="M12 4v12m8-8l-8 8-8-8"
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            ></path>
-                          </svg>
-                          Download
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="inline-flex items-center px-6 py-3 bg-red-600 transition ease-in-out delay-75 hover:bg-red-700 text-white text-base font-medium rounded-md shadow-sm hover:-translate-y-1 hover:scale-110"
-                        >
-                          <svg
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            className="w-5 h-5 mr-2"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            ></path>
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                  <div className={`${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "flex flex-col space-y-4"}`}>
+                    {filteredImages.map((item, index) => (
+                      viewMode === "grid" ? (
+                        // Grid view
+                        <div key={index} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                          <div className="h-48 overflow-hidden bg-gray-100">
+                            <img 
+                              src={item.url} 
+                              alt={item.name} 
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-lg font-medium text-gray-900 truncate" title={item.name}>
+                              {item.name}
+                            </h3>
+                            <div className="mt-4 flex justify-between">
+                              <button 
+                                onClick={() => handleDownload(item.url, item.name)}
+                                className="inline-flex items-center px-3 py-1 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                              >
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  className="h-4 w-4 mr-1" 
+                                  fill="none" 
+                                  viewBox="0 0 24 24" 
+                                  stroke="currentColor"
+                                >
+                                  <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={2} 
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                                  />
+                                </svg>
+                                Download
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(item)}
+                                className="inline-flex items-center px-3 py-1 text-sm font-medium text-red-600 hover:text-red-500"
+                              >
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  className="h-4 w-4 mr-1" 
+                                  fill="none" 
+                                  viewBox="0 0 24 24" 
+                                  stroke="currentColor"
+                                >
+                                  <path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={2} 
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                                  />
+                                </svg>
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // List view
+                        <div key={index} className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center hover:shadow-md transition-shadow duration-300">
+                          <div className="w-full sm:w-20 h-20 mb-4 sm:mb-0 sm:mr-4 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                            <img 
+                              src={item.url} 
+                              alt={item.name} 
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="flex-grow">
+                            <h3 className="text-lg font-medium text-gray-900" title={item.name}>
+                              {item.name}
+                            </h3>
+                          </div>
+                          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+                            <button 
+                              onClick={() => handleDownload(item.url, item.name)}
+                              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className="h-4 w-4 mr-2" 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                                />
+                              </svg>
+                              Download
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(item)}
+                              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                            >
+                              <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className="h-4 w-4 mr-2" 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                                />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    ))}
+                  </div>
                 )}
-              </div>
+              </>
             )}
-            {isDivVisible && (
-              <div className="popup-overlay">
-                <div className="popup">
-                  <div className="form foxx">
-                    <button onClick={handleHideClick} className="btn close">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        height="1em"
-                        viewBox="0 0 384 512"
+          </main>
+
+          {/* Footer */}
+          <footer className="bg-white mt-10 border-t border-gray-200">
+            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+              <p className="text-center text-sm text-gray-500">
+                &copy; {new Date().getFullYear()} Document Manager. All rights reserved.
+              </p>
+            </div>
+          </footer>
+
+          {/* Upload Modal */}
+          {isDivVisible && (
+            <div className="fixed inset-0 overflow-y-auto z-50">
+              <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                  <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                </div>
+
+                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                
+                <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                  <div className="absolute top-0 right-0 pt-4 pr-4">
+                    <button 
+                      onClick={handleHideClick}
+                      className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                    >
+                      <span className="sr-only">Close</span>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-6 w-6" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
                       >
-                        <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"></path>
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M6 18L18 6M6 6l12 12" 
+                        />
                       </svg>
                     </button>
+                  </div>
 
-                    <br />
-                    <span className="form-title">Upload your file</span>
-                    <p className="form-paragraph">
-                      File should be in .jpg, .jpeg, .png, .gif, .webp, .svg
-                      format.
-                    </p>
-                    <label htmlFor="file-input" className="drop-container">
-                      <span className="drop-title">Drop files here</span>
-                      or
-                      <input
-                        type="file"
-                        onChange={(e) => {
-                          setImg(e.target.files[0]);
-                        }}
-                        accept=".jpg, .jpeg, .png, .gif, .webp, .svg"
-                        required
-                        id="file-input"
-                      />
-                    </label>
-                    <input
-                      className="inputtt"
-                      type="text"
-                      placeholder="Enter image name"
-                      value={imageName}
-                      required
-                      onChange={(e) => setImageName(e.target.value)}
-                    />
-                    <div className="flex items-center justify-center pt-5">
-                      <button
-                        onClick={handleClick}
-                        className="flex items-center bg-blue-500 text-white gap-1 px-4 py-2 cursor-pointer text-gray-800 font-semibold tracking-widest rounded-md hover:bg-blue-400 duration-300 hover:gap-2 hover:translate-x-3"
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-6 w-6 text-indigo-600" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" 
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                        Upload Image
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">
+                          File should be in .jpg, .jpeg, .png, .gif, .webp, or .svg format.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    {/* File preview */}
+                    {previewUrl && (
+                      <div className="mb-4 flex justify-center">
+                        <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
+                          <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* File upload */}
+                    <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                      <div className="space-y-1 text-center">
+                        <svg 
+                          className="mx-auto h-12 w-12 text-gray-400" 
+                          stroke="currentColor" 
+                          fill="none" 
+                          viewBox="0 0 48 48" 
+                          aria-hidden="true"
+                        >
+                          <path 
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" 
+                            strokeWidth={2} 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                          />
+                        </svg>
+                        <div className="flex text-sm text-gray-600">
+                          <label 
+                            htmlFor="file-upload" 
+                            className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
+                          >
+                            <span>Upload a file</span>
+                            <input 
+                              id="file-upload" 
+                              name="file-upload" 
+                              type="file" 
+                              className="sr-only" 
+                              onChange={handleFileChange}
+                              accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+                            />
+                          </label>
+                          <p className="pl-1">or drag and drop</p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, GIF, WEBP, SVG up to 10MB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex justify-center">
+                      <button 
+                        onClick={handleUpload}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
                         Upload
-                        <svg
-                          className="w-5 h-5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-                            strokeLinejoin="round"
-                            strokeLinecap="round"
-                          ></path>
-                        </svg>
+                      </button>
+                      <button 
+                        onClick={handleHideClick}
+                        className="ml-2 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Cancel        
                       </button>
                     </div>
                   </div>
-                  <br />
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div style={containerStyle}>
-            <Loader />
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
+                </div>  
+              </div>  
+            </div>  
+          )}  
+        </> 
+      ) : (   
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader />
+        </div>
+      )}    
+    </div>
+  );  
+}
 export default Display;
