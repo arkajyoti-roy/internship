@@ -841,7 +841,6 @@ const Display = () => {
                           <span className="relative bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
                             Upload a file
                           </span>
-                          <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-gray-500">
                           PNG, JPG, GIF, WEBP, SVG, PDF up to 4MB
