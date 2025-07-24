@@ -1058,8 +1058,8 @@ const Display = () => {
                           onChange={(e) => {
                             const selectedFile = e.target.files[0];
                             if (selectedFile) {
-                              if (selectedFile.size > 4 * 1024 * 1024) {
-                                toast.warning("File size exceeds 4MB limit");
+                                if (selectedFile.size > 1 * 1024 * 1024) {
+                                toast.warning("File size exceeds 1MB limit");
                                 return;
                               }
                               setFile(selectedFile);
