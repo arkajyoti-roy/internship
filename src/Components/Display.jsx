@@ -18,7 +18,7 @@ import { imageDb } from "./firebase";
 import {
   getDownloadURL,
   ref,
-  uploadBytes,
+  uploadBytesResumable,
   deleteObject,
 } from "firebase/storage";
 import { v4 } from "uuid";
@@ -139,34 +139,58 @@ const Display = () => {
     }
 
     handleHideClick();
-    toast.info("Uploading...", {
+    const toastId = toast.loading("Uploading: 0%", {
       position: "top-right",
     });
 
     try {
       const fileRef = ref(imageDb, `files/${auth.currentUser.uid}/${v4()}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      await addDoc(collection(db, "Files"), {
-        uid: auth.currentUser.uid,
-        fileName: fileName.trim(),
-        fileUrl: url,
-        fileType: getFileType(file),
-        timestamp: new Date().getTime(),
-      });
+      const uploadTask = uploadBytesResumable(fileRef, file);
 
-      fetchFiles(auth.currentUser.uid);
-      toast.success("Uploaded Successfully!", {
-        position: "top-right",
-      });
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          toast.update(toastId, {
+            render: `Uploading: ${progress}%`,
+          });
+        },
+        (error) => {
+          console.error("Error uploading:", error);
+          toast.update(toastId, {
+            render: "Upload failed: " + error.message,
+            type: "error",
+            isLoading: false,
+          });
+        },
+        async () => {
+          const url = await getDownloadURL(fileRef);
+          await addDoc(collection(db, "Files"), {
+            uid: auth.currentUser.uid,
+            fileName: fileName.trim(),
+            fileUrl: url,
+            fileType: getFileType(file),
+            timestamp: new Date().getTime(),
+          });
 
-      setFileName("");
-      setFile(null);
-      setPreviewUrl(null);
+          fetchFiles(auth.currentUser.uid);
+          toast.update(toastId, {
+            render: "Uploaded Successfully!",
+            type: "success",
+            isLoading: false,
+            autoClose: 3000,
+          });
+
+          setFileName("");
+          setFile(null);
+          setPreviewUrl(null);
+        }
+      );
     } catch (error) {
       console.error("Error uploading:", error);
-      toast.error("Upload failed: " + error.message, {
-        position: "top-right",
+      toast.update(toastId, {
+        render: "Upload failed: " + error.message,
+        type: "error",
+        isLoading: false,
       });
     }
   };
