@@ -1,8 +1,8 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
-import { setDoc, doc } from "firebase/firestore";
+import { setDoc, doc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -11,6 +11,7 @@ import {
   FaFileAlt,
   FaFolder,
   FaFolderOpen,
+  FaGoogle,
 } from "react-icons/fa";
 
 import "./Dis.css";
@@ -23,6 +24,7 @@ const Registration = () => {
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordFeedback, setPasswordFeedback] = useState("");
   const [errors, setErrors] = useState({
@@ -143,6 +145,56 @@ const Registration = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const signUpWithGoogle = async () => {
+    setGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user) {
+        // Check if user already exists in Firestore
+        const userDoc = await getDoc(doc(db, "Users", user.uid));
+        
+        if (!userDoc.exists()) {
+          // Create new user document if it doesn't exist
+          await setDoc(doc(db, "Users", user.uid), {
+            email: user.email,
+            name: user.displayName || "",
+            phone: user.phoneNumber || "",
+            createdAt: new Date(),
+            provider: "google",
+          });
+          
+          toast.success("Registration successful! Redirecting...", {
+            position: "top-right",
+          });
+        } else {
+          toast.success("Welcome back! Redirecting...", {
+            position: "top-right",
+          });
+        }
+
+        setTimeout(() => {
+          navigate("/display"); // or wherever you want to redirect after successful registration
+        }, 2000);
+      }
+    } catch (error) {
+      console.log(error.message);
+      toast.error(
+        error.message.includes("auth/popup-closed-by-user")
+          ? "Sign-up cancelled by user"
+          : "Failed to sign up with Google. Please try again.",
+        {
+          position: "top-right",
+        }
+      );
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -380,8 +432,41 @@ const Registration = () => {
               </div>
             </div>
 
-            {/* <div className="mt-6">
-            </div> */}
+            <div className="mt-6">
+              <button
+                onClick={signUpWithGoogle}
+                disabled={googleLoading}
+                className="w-full flex justify-center items-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
+              >
+                {googleLoading ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-gray-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <>
+                    <FaGoogle className="h-5 w-5 text-red-500" />
+                    Sign up with Google
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           <p className="mt-6 text-center text-sm text-gray-600">
@@ -391,37 +476,11 @@ const Registration = () => {
               className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
             >
               Login
-          
             </Link>
           </p>
         </div>
 
-        {/* <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
-            <div className="flex justify-center">
-              <FaFileAlt className="h-5 w-5 text-indigo-500" />
-            </div>
-            <p className="mt-1 text-xs font-medium text-gray-700">
-              Store Documents
-            </p>
-          </div>
-          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
-            <div className="flex justify-center">
-              <FaFolder className="h-5 w-5 text-indigo-500" />
-            </div>
-            <p className="mt-1 text-xs font-medium text-gray-700">
-              Organize Files
-            </p>
-          </div>
-          <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
-            <div className="flex justify-center">
-              <FaFolderOpen className="h-5 w-5 text-indigo-500" />
-            </div>
-            <p className="mt-1 text-xs font-medium text-gray-700">
-              Secure Access
-            </p>
-          </div>
-        </div> */}
+       
       </div>
 
       <style jsx>{`
