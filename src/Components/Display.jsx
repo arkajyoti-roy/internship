@@ -743,22 +743,42 @@ const Display = () => {
                                 }
                                 className="inline-flex items-center px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4 mr-1"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                                Delete
+                               <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 mr-2"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                />
+                              </svg>
+                                Download
                               </button>
+                               <button
+                              onClick={() => handleDelete(item)}
+                              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 mr-2"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Delete
+                            </button>
                             </div>
                           </div>
                         </div>
@@ -835,14 +855,14 @@ const Display = () => {
             )}
           </main>
 
-          <footer className="bg-white dark:bg-gray-800 mt-10 border-t border-gray-200 dark:border-gray-700">
-            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                &copy; {new Date().getFullYear()} Document Manager. All rights
-                reserved.
-              </p>
-            </div>
-          </footer>
+        <footer className="sticky-footer bg-white dark:bg-gray-800 mt-10 border-t border-gray-200 dark:border-gray-700">
+  <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+      &copy; {new Date().getFullYear()} Document Manager. All rights reserved.
+    </p>
+  </div>
+</footer>
+
 
           {isDivVisible && (
             <div className="fixed inset-0 overflow-y-auto z-50">

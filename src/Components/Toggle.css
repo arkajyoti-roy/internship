@@ -201,3 +201,12 @@
   -ms-transform: translateY(-50%);
   transform: translateY(-50%);
 }
+
+
+
+.sticky-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
