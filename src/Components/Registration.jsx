@@ -1,4 +1,9 @@
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+} from "firebase/auth";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase";
@@ -12,10 +17,10 @@ import {
   FaFolder,
   FaFolderOpen,
   FaGoogle,
+  FaGithub,
 } from "react-icons/fa";
 
 import "./Dis.css";
-// import Google from "./Google";
 
 const Registration = () => {
   const [name, setName] = useState("");
@@ -25,6 +30,7 @@ const Registration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordFeedback, setPasswordFeedback] = useState("");
   const [errors, setErrors] = useState({
@@ -126,7 +132,7 @@ const Registration = () => {
         });
       }
 
-      toast.success("Registration successful! Redirecting to login...", {
+      toast.success("Registration successful!", {
         position: "top-right",
       });
 
@@ -159,7 +165,7 @@ const Registration = () => {
       if (user) {
         // Check if user already exists in Firestore
         const userDoc = await getDoc(doc(db, "Users", user.uid));
-        
+
         if (!userDoc.exists()) {
           // Create new user document if it doesn't exist
           await setDoc(doc(db, "Users", user.uid), {
@@ -169,18 +175,18 @@ const Registration = () => {
             createdAt: new Date(),
             provider: "google",
           });
-          
-          toast.success("Registration successful! Redirecting...", {
+
+          toast.success("Registration successful!", {
             position: "top-right",
           });
         } else {
-          toast.success("Welcome back! Redirecting...", {
+          toast.success("Welcome back!", {
             position: "top-right",
           });
         }
 
         setTimeout(() => {
-          navigate("/display"); // or wherever you want to redirect after successful registration
+          navigate("/display");
         }, 2000);
       }
     } catch (error) {
@@ -195,6 +201,58 @@ const Registration = () => {
       );
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const signUpWithGitHub = async () => {
+    setGithubLoading(true);
+    const provider = new GithubAuthProvider();
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user) {
+        // Check if user already exists in Firestore
+        const userDoc = await getDoc(doc(db, "Users", user.uid));
+
+        if (!userDoc.exists()) {
+          // Create new user document if it doesn't exist
+          await setDoc(doc(db, "Users", user.uid), {
+            email: user.email,
+            name: user.displayName || "",
+            phone: user.phoneNumber || "",
+            createdAt: new Date(),
+            provider: "github",
+          });
+
+          toast.success("Registration successful!", {
+            position: "top-right",
+          });
+        } else {
+          toast.success("Welcome back!", {
+            position: "top-right",
+          });
+        }
+
+        setTimeout(() => {
+          navigate("/display");
+        }, 2000);
+      }
+    } catch (error) {
+      console.log(error.message);
+      toast.error(
+        error.message.includes("auth/popup-closed-by-user")
+          ? "Sign-up cancelled by user"
+          : error.message.includes("auth/account-exists-with-different-credential")
+          ? "An account already exists with the same email address but different sign-in credentials."
+          : "Failed to sign up with GitHub. Please try again.",
+        {
+          position: "top-right",
+        }
+      );
+    } finally {
+      setGithubLoading(false);
     }
   };
 
@@ -432,7 +490,7 @@ const Registration = () => {
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               <button
                 onClick={signUpWithGoogle}
                 disabled={googleLoading}
@@ -461,8 +519,63 @@ const Registration = () => {
                   </svg>
                 ) : (
                   <>
-                    <FaGoogle className="h-5 w-5 text-red-500" />
+                    <svg
+                      viewBox="0 0 48 48"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
+                        fill="#FFC107"
+                      ></path>
+                      <path
+                        d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
+                        fill="#FF3D00"
+                      ></path>
+                      <path
+                        d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
+                        fill="#4CAF50"
+                      ></path>
+                      <path
+                        d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
+                        fill="#1976D2"
+                      ></path>
+                    </svg>
                     Sign up with Google
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={signUpWithGitHub}
+                disabled={githubLoading}
+                className="w-full flex justify-center items-center gap-3 py-2 px-4 border border-gray-800 rounded-md shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all duration-300"
+              >
+                {githubLoading ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <>
+                    <FaGithub className="w-5 h-5" />
+                    Sign up with GitHub
                   </>
                 )}
               </button>
@@ -479,8 +592,6 @@ const Registration = () => {
             </Link>
           </p>
         </div>
-
-       
       </div>
 
       <style jsx>{`
