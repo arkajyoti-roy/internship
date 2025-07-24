@@ -369,12 +369,12 @@ const Display = () => {
         <>
           <header className="bg-white shadow-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
+              <div className="flex justify-between items-center h-10">
+                <div className="flex items-center flex-shrink-0">
                   <div className="flex-shrink-0">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-10 w-10 text-white p-2 bg-indigo-600 rounded-lg"
+                      className="h-8 w-8 text-white p-1.5 bg-indigo-600 rounded-lg"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -387,15 +387,21 @@ const Display = () => {
                       />
                     </svg>
                   </div>
-                  <div className="ml-3 text-xl font-bold text-gray-900">
+                  <div className="hidden sm:block ml-2 text-lg font-bold text-gray-900">
                     Document Manager
+                  </div>
+                  <div className="ml-2 sm:hidden flex items-center">
+                    <span className="text-base font-medium text-gray-900">Hi,{" "}</span>
+                    <span className="text-base font-bold text-gray-900 ml-1">
+                      {userDetails.name}! 
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-4">
-                  <div className="hidden md:block">
-                    <span className="text-gray-700 font-medium">
-                      Welcome,{" "}
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  <div className="hidden sm:block">
+                    <span className="text-gray-700 text-sm">
+                      Welcome back,{" "}
                       <span className="font-bold text-indigo-600">
                         {userDetails.name}
                       </span>
@@ -404,7 +410,7 @@ const Display = () => {
 
                   <button
                     onClick={handleShowClick}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -420,16 +426,16 @@ const Display = () => {
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                       />
                     </svg>
-                    Upload
+                    <span>Upload</span>
                   </button>
 
                   <button
                     onClick={handleLogout}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center px-2 sm:px-3 py-1.5 border border-red-200 text-sm font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2"
+                      className="h-5 w-5 sm:mr-2"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -441,7 +447,7 @@ const Display = () => {
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                       />
                     </svg>
-                    Logout
+                    <span className="hidden sm:inline">Logout</span>
                   </button>
                 </div>
               </div>
