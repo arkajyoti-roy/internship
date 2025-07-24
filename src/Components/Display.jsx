@@ -126,32 +126,32 @@ const Display = () => {
   };
 
   const handleFileChange = (e) => {
-  const selectedFile = e.target.files[0];
-  if (selectedFile) {
-    // Check file size first
-    if (selectedFile.size > 4 * 1024 * 1024) {
-      toast.error("File size exceeds 4MB limit", {
-        position: "top-right",
-      });
-      return;
-    }
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      // Check file size first
+      if (selectedFile.size > 4 * 1024 * 1024) {
+        toast.error("File size exceeds 4MB limit", {
+          position: "top-right",
+        });
+        return;
+      }
 
-    setFile(selectedFile);
-    
-    const fileType = getFileType(selectedFile);
-    
-    if (fileType === "image") {
-      const objectUrl = URL.createObjectURL(selectedFile);
-      setPreviewUrl(objectUrl);
-    } else if (fileType === "pdf") {
-      setPreviewUrl(null); // No preview for PDF initially
+      setFile(selectedFile);
+
+      const fileType = getFileType(selectedFile);
+
+      if (fileType === "image") {
+        const objectUrl = URL.createObjectURL(selectedFile);
+        setPreviewUrl(objectUrl);
+      } else if (fileType === "pdf") {
+        setPreviewUrl(null); // No preview for PDF initially
+      }
+
+      // Set filename without extension
+      const name = selectedFile.name.split(".").slice(0, -1).join(".");
+      setFileName(name);
     }
-    
-    // Set filename without extension
-    const name = selectedFile.name.split(".").slice(0, -1).join(".");
-    setFileName(name);
-  }
-};
+  };
 
   const handleUpload = async () => {
     if (!fileName.trim() || !file) {
@@ -971,94 +971,53 @@ const Display = () => {
 
                   <div className="mt-5">
                     {/* File preview */}
-                    {/* {previewUrl && (
+                    {file && (
                       <div className="mb-4 flex justify-center">
-                        <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                          <img
-                            src={previewUrl}
-                            alt="Preview"
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      </div>
-                    )} */}
-{/* File preview */}
-{file && (
-  <div className="mb-4 flex justify-center">
-    <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-      {file.type.startsWith('image/') ? (
-        // Image preview
-        previewUrl && (
-          <img
-            src={previewUrl}
-            alt="Preview"
-            className="w-full h-full object-contain"
-          />
-        )
-      ) : file.type === 'application/pdf' ? (
-        // PDF preview
-        previewUrl ? (
-          <iframe
-            src={previewUrl}
-            className="w-full h-full border-0"
-            title="PDF Preview"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-16 w-16 text-red-500 mx-auto mb-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Loading PDF preview...
-              </p>
-            </div>
-          </div>
-        )
-      ) : null}
-    </div>
-  </div>
-)}
-                    {/* Show file name for PDFs when no preview */}
-                    {/* {file && !previewUrl && (
-                      <div className="mb-4 flex justify-center">
-                        <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
-                          <div className="text-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-16 w-16 text-red-500 mx-auto mb-2"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                        <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                          {file.type.startsWith("image/") ? (
+                            // Image preview
+                            previewUrl && (
+                              <img
+                                src={previewUrl}
+                                alt="Preview"
+                                className="w-full h-full object-contain"
                               />
-                            </svg>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              PDF selected
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {file.name}
-                            </p>
-                          </div>
+                            )
+                          ) : file.type === "application/pdf" ? (
+                            // PDF preview
+                            previewUrl ? (
+                              <iframe
+                                src={previewUrl}
+                                className="w-full h-full border-0"
+                                title="PDF Preview"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="text-center">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-16 w-16 text-red-500 mx-auto mb-2"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    Loading PDF preview...
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          ) : null}
                         </div>
                       </div>
-                    )} */}
+                    )}
 
                     {/* File upload */}
                     <label
@@ -1100,20 +1059,22 @@ const Display = () => {
                             const selectedFile = e.target.files[0];
                             if (selectedFile) {
                               if (selectedFile.size > 4 * 1024 * 1024) {
-                                alert("File size exceeds 4MB limit");
+                                toast.warning("File size exceeds 4MB limit");
                                 return;
                               }
                               setFile(selectedFile);
                               setFileName(selectedFile.name);
-                              
+
                               // Generate preview based on file type
-                              if (selectedFile.type.startsWith('image/')) {
+                              if (selectedFile.type.startsWith("image/")) {
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
                                   setPreviewUrl(reader.result);
                                 };
                                 reader.readAsDataURL(selectedFile);
-                              } else if (selectedFile.type === 'application/pdf') {
+                              } else if (
+                                selectedFile.type === "application/pdf"
+                              ) {
                                 const url = URL.createObjectURL(selectedFile);
                                 setPreviewUrl(url);
                               }
