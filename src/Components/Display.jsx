@@ -140,7 +140,14 @@ const Display = () => {
 
     handleHideClick();
     const toastId = toast.loading("Uploading: 0%", {
-      position: "top-right",
+      position: "bottom-right",
+      style: {
+        background: "#4F46E5",
+        color: "white",
+        fontWeight: "500",
+        padding: "16px",
+        borderRadius: "8px",
+      },
     });
 
     try {
@@ -152,6 +159,13 @@ const Display = () => {
           const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
           toast.update(toastId, {
             render: `Uploading: ${progress}%`,
+            style: {
+              background: "#4F46E5",
+              color: "white",
+              fontWeight: "500",
+              padding: "16px",
+              borderRadius: "8px",
+            },
           });
         },
         (error) => {
@@ -160,6 +174,13 @@ const Display = () => {
             render: "Upload failed: " + error.message,
             type: "error",
             isLoading: false,
+            style: {
+              background: "#DC2626",
+              color: "white",
+              fontWeight: "500",
+              padding: "16px",
+              borderRadius: "8px",
+            },
           });
         },
         async () => {
@@ -178,6 +199,13 @@ const Display = () => {
             type: "success",
             isLoading: false,
             autoClose: 3000,
+            style: {
+              background: "#059669",
+              color: "white",
+              fontWeight: "500",
+              padding: "16px",
+              borderRadius: "8px",
+            },
           });
 
           setFileName("");
