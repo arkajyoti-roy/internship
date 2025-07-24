@@ -25,9 +25,6 @@ import {
 import { v4 } from "uuid";
 import { toast } from "react-toastify";
 import ImgLoader from "./ImgLoader";
-import NoImg from "./NoImg";
-// import { Document, Page } from 'react-pdf';
-// import NewAdd from "./NewAdd";
 
 const Display = () => {
   const [userDetails, setUserDetails] = useState(null);
@@ -685,7 +682,6 @@ const Display = () => {
               <>
                 {filteredFiles.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-gray-800 rounded-lg shadow p-8">
-                    <NoImg />
                     <p className="text-gray-500 dark:text-gray-400 mt-4">No files found</p>
                     <button
                       onClick={handleShowClick}
