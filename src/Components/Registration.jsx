@@ -391,11 +391,12 @@ const Registration = () => {
               className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
             >
               Login
+          
             </Link>
           </p>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+        {/* <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
             <div className="flex justify-center">
               <FaFileAlt className="h-5 w-5 text-indigo-500" />
@@ -420,7 +421,7 @@ const Registration = () => {
               Secure Access
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <style jsx>{`

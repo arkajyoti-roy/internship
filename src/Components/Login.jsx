@@ -270,7 +270,7 @@ const Login = () => {
             </Link>
           </p>
         </div>
-
+{/* 
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="px-2 py-3 bg-white/80 backdrop-blur-sm rounded-lg shadow">
             <div className="flex justify-center">
@@ -296,7 +296,7 @@ const Login = () => {
               Secure Access
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <style jsx>{`
