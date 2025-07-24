@@ -1,0 +1,137 @@
+.theme-switch {
+  --theme-switch-size: 30px;
+  --theme-switch-bg: #2563eb;
+  position: relative;
+  display: inline-block;
+  width: var(--theme-switch-size);
+  height: var(--theme-switch-size);
+  cursor: pointer;
+}
+
+.theme-switch__checkbox {
+  display: none;
+}
+
+.theme-switch__container {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--theme-switch-bg);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.theme-switch__container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container {
+  transform: scale(1);
+  background-color: #1e293b;
+}
+
+.theme-switch__stars-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+  color: rgb(248 250 252);
+}
+
+.theme-switch__stars-container > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container {
+  opacity: 1;
+}
+
+.theme-switch__circle-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-switch__sun-moon-container {
+  pointer-events: none;
+  position: relative;
+  width: 55%;
+  height: 55%;
+  background: rgb(248 250 252);
+  border-radius: 50%;
+  transition: transform 0.5s ease, background-color 0.3s ease;
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__sun-moon-container {
+  transform: scale(0.8);
+  background-color: rgb(203 213 225);
+}
+
+.theme-switch__moon {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: var(--theme-switch-bg);
+  transition: transform 0.5s ease, background-color 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__moon {
+  background: #1e293b;
+  transform: translateX(0);
+}
+
+.theme-switch__spot {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgb(203 213 225);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.theme-switch__spot:nth-child(2) {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.theme-switch__spot:nth-child(3) {
+  top: unset;
+  bottom: 4px;
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__spot {
+  opacity: 1;
+}
+
+.theme-switch__clouds {
+  position: absolute;
+  top: -10%;
+  left: -20%;
+  width: 140%;
+  height: 120%;
+  background: rgb(248 250 252);
+  border-radius: 50%;
+  transition: transform 0.4s ease;
+}
+
+.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__clouds {
+  transform: translateY(100%);
+}
