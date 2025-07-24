@@ -25,13 +25,14 @@ import { v4 } from "uuid";
 import { toast } from "react-toastify";
 import ImgLoader from "./ImgLoader";
 import NoImg from "./NoImg";
+// import { Document, Page } from 'react-pdf';
 // import NewAdd from "./NewAdd";
 
 const Display = () => {
   const [userDetails, setUserDetails] = useState(null);
-  const [img, setImg] = useState(null);
-  const [imgUrl, setImgUrl] = useState([]);
-  const [imageName, setImageName] = useState("");
+  const [file, setFile] = useState(null);
+  const [fileUrl, setFileUrl] = useState([]);
+  const [fileName, setFileName] = useState("");
   const [previewUrl, setPreviewUrl] = useState(null);
   const navigate = useNavigate();
   const [isDivVisible, setIsDivVisible] = useState(false);
@@ -65,7 +66,7 @@ const Display = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setUserDetails(docSnap.data());
-          fetchImages(user.uid);
+          fetchFiles(user.uid);
         } else {
           console.log("User is logged out");
         }
@@ -79,27 +80,40 @@ const Display = () => {
 
   const handleHideClick = () => {
     setIsDivVisible(false);
-    setImageName("");
+    setFileName("");
     setPreviewUrl(null);
-    setImg(null);
+    setFile(null);
+  };
+
+  const getFileType = (file) => {
+    const type = file.type;
+    if (type.startsWith("image/")) return "image";
+    if (type === "application/pdf") return "pdf";
+    return "unknown";
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImg(file);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
 
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
+      const fileType = getFileType(selectedFile);
 
-      const fileName = file.name.split(".").slice(0, -1).join(".");
-      setImageName(fileName);
+      if (fileType === "image") {
+        const objectUrl = URL.createObjectURL(selectedFile);
+        setPreviewUrl(objectUrl);
+      } else if (fileType === "pdf") {
+        setPreviewUrl(null); // No preview for PDF
+      }
+
+      const name = selectedFile.name.split(".").slice(0, -1).join(".");
+      setFileName(name);
     }
   };
 
   const handleUpload = async () => {
-    if (!imageName.trim() || !img) {
-      toast.error("Both image name and image file are required!", {
+    if (!fileName.trim() || !file) {
+      toast.error("Both file name and file are required!", {
         position: "top-right",
       });
       return;
@@ -111,11 +125,12 @@ const Display = () => {
       "image/gif",
       "image/webp",
       "image/svg+xml",
+      "application/pdf",
     ];
 
-    if (!allowedFormats.includes(img.type)) {
+    if (!allowedFormats.includes(file.type)) {
       toast.error(
-        "Invalid file format. Please upload an image in .jpg, .jpeg, .png, .gif, .webp, or .svg format.",
+        "Invalid file format. Please upload an image (.jpg, .jpeg, .png, .gif, .webp, .svg) or PDF file.",
         {
           position: "top-right",
         }
@@ -129,23 +144,24 @@ const Display = () => {
     });
 
     try {
-      const imgRef = ref(imageDb, `iimps/${auth.currentUser.uid}/${v4()}`);
-      await uploadBytes(imgRef, img);
-      const url = await getDownloadURL(imgRef);
-      await addDoc(collection(db, "Images"), {
+      const fileRef = ref(imageDb, `files/${auth.currentUser.uid}/${v4()}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      await addDoc(collection(db, "Files"), {
         uid: auth.currentUser.uid,
-        imageName: imageName.trim(),
-        imageUrl: url,
+        fileName: fileName.trim(),
+        fileUrl: url,
+        fileType: getFileType(file),
         timestamp: new Date().getTime(),
       });
 
-      fetchImages(auth.currentUser.uid);
+      fetchFiles(auth.currentUser.uid);
       toast.success("Uploaded Successfully!", {
         position: "top-right",
       });
 
-      setImageName("");
-      setImg(null);
+      setFileName("");
+      setFile(null);
       setPreviewUrl(null);
     } catch (error) {
       console.error("Error uploading:", error);
@@ -155,26 +171,27 @@ const Display = () => {
     }
   };
 
-  const fetchImages = async (uid) => {
+  const fetchFiles = async (uid) => {
     setLoading(true);
     try {
-      const q = query(collection(db, "Images"), where("uid", "==", uid));
+      const q = query(collection(db, "Files"), where("uid", "==", uid));
       const querySnapshot = await getDocs(q);
       const urls = [];
       querySnapshot.forEach((doc) => {
         urls.push({
           id: doc.id,
-          url: doc.data().imageUrl,
-          name: doc.data().imageName,
+          url: doc.data().fileUrl,
+          name: doc.data().fileName,
+          type: doc.data().fileType || "image", // Default to image for backward compatibility
           timestamp: doc.data().timestamp || 0,
         });
       });
 
       urls.sort((a, b) => b.timestamp - a.timestamp);
-      setImgUrl(urls);
+      setFileUrl(urls);
     } catch (error) {
-      console.error("Error fetching images:", error);
-      toast.error("Failed to load images", {
+      console.error("Error fetching files:", error);
+      toast.error("Failed to load files", {
         position: "top-right",
       });
     } finally {
@@ -182,29 +199,29 @@ const Display = () => {
     }
   };
 
-  const handleDelete = async (image) => {
-    if (!image.url) {
-      console.error("Invalid URL:", image.url);
+  const handleDelete = async (file) => {
+    if (!file.url) {
+      console.error("Invalid URL:", file.url);
       toast.error("Invalid URL. Please try again.", {
         position: "top-right",
       });
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete "${image.name}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${file.name}"?`)) {
       return;
     }
 
     try {
       try {
-        const imgRef = ref(imageDb, image.url);
-        await deleteObject(imgRef);
+        const fileRef = ref(imageDb, file.url);
+        await deleteObject(fileRef);
       } catch (storageError) {
         console.error("Error deleting from storage:", storageError);
       }
 
-      await deleteDoc(doc(db, "Images", image.id));
-      setImgUrl(imgUrl.filter((item) => item.id !== image.id));
+      await deleteDoc(doc(db, "Files", file.id));
+      setFileUrl(fileUrl.filter((item) => item.id !== file.id));
 
       toast.success("File deleted successfully", {
         position: "top-right",
@@ -270,10 +287,81 @@ const Display = () => {
     }
   };
 
-  // Filter images based on search
-  const filteredImages = imgUrl.filter((item) =>
+  // Filter files based on search
+  const filteredFiles = fileUrl.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const [pdfPreviews, setPdfPreviews] = useState({});
+
+  // PDF Preview Component
+  const PDFPreview = ({ url, fileName }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    return (
+      <div className="w-full h-full relative bg-gray-100">
+        {!error ? (
+          <>
+            <iframe
+              src={`https://docs.google.com/gview?url=${encodeURIComponent(
+                url
+              )}&embedded=true`}
+              className="w-full h-full border-0"
+              title={fileName}
+              onLoad={() => setLoading(false)}
+              onError={() => {
+                setError(true);
+                setLoading(false);
+              }}
+              style={{ pointerEvents: "none" }}
+            />
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-transparent cursor-pointer" />
+          </>
+        ) : (
+          // Fallback to icon if preview fails
+          <div className="w-full h-full flex items-center justify-center bg-red-50">
+            <div className="text-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-red-500 mx-auto mb-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="text-xs text-gray-500">PDF Document</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFilePreview = (item) => {
+    if (item.type === "pdf") {
+      return <PDFPreview url={item.url} fileName={item.name} />;
+    } else {
+      return (
+        <img
+          src={item.url}
+          alt={item.name}
+          className="w-full h-full object-contain"
+        />
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -387,8 +475,7 @@ const Display = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-{/* layout: list&grid */}
-             
+              {/* layout: list&grid */}
             </div>
 
             {loading ? (
@@ -397,10 +484,10 @@ const Display = () => {
               </div>
             ) : (
               <>
-                {filteredImages.length === 0 ? (
+                {filteredFiles.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow p-8">
                     <NoImg />
-                    <p className="text-gray-500 mt-4">No images found</p>
+                    <p className="text-gray-500 mt-4">No files found</p>
                     <button
                       onClick={handleShowClick}
                       className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
@@ -430,7 +517,7 @@ const Display = () => {
                         : "flex flex-col space-y-4"
                     }`}
                   >
-                    {filteredImages.map((item, index) =>
+                    {filteredFiles.map((item, index) =>
                       viewMode === "grid" ? (
                         // Grid view
                         <div
@@ -438,11 +525,7 @@ const Display = () => {
                           className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow duration-300"
                         >
                           <div className="h-48 overflow-hidden bg-gray-100">
-                            <img
-                              src={item.url}
-                              alt={item.name}
-                              className="w-full h-full object-contain"
-                            />
+                            {renderFilePreview(item)}
                           </div>
                           <div className="p-4">
                             <h3
@@ -451,6 +534,9 @@ const Display = () => {
                             >
                               {item.name}
                             </h3>
+                            <p className="text-sm text-gray-500 capitalize">
+                              {item.type} file
+                            </p>
                             <div className="mt-4 flex justify-between">
                               <button
                                 onClick={() =>
@@ -504,11 +590,7 @@ const Display = () => {
                           className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center hover:shadow-md transition-shadow duration-300"
                         >
                           <div className="w-full sm:w-20 h-20 mb-4 sm:mb-0 sm:mr-4 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            <img
-                              src={item.url}
-                              alt={item.name}
-                              className="w-full h-full object-contain"
-                            />
+                            {renderFilePreview(item)}
                           </div>
                           <div className="flex-grow">
                             <h3
@@ -517,6 +599,9 @@ const Display = () => {
                             >
                               {item.name}
                             </h3>
+                            <p className="text-sm text-gray-500 capitalize">
+                              {item.type} file
+                            </p>
                           </div>
                           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
                             <button
@@ -640,12 +725,12 @@ const Display = () => {
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900">
-                        Upload Image
+                        Upload File
                       </h3>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          File should be in .jpg, .jpeg, .png, .gif, .webp, or
-                          .svg format.
+                          File should be an image (.jpg, .jpeg, .png, .gif,
+                          .webp, .svg) or PDF format.
                         </p>
                       </div>
                     </div>
@@ -665,8 +750,36 @@ const Display = () => {
                       </div>
                     )}
 
+                    {/* Show file name for PDFs when no preview */}
+                    {file && !previewUrl && (
+                      <div className="mb-4 flex justify-center">
+                        <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                          <div className="text-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-16 w-16 text-red-500 mx-auto mb-2"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                              />
+                            </svg>
+                            <p className="text-sm text-gray-600">
+                              PDF selected
+                            </p>
+                            <p className="text-xs text-gray-500">{file.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* File upload */}
-                    <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    {/* <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                       <div className="space-y-1 text-center">
                         <svg
                           className="mx-auto h-12 w-12 text-gray-400"
@@ -694,16 +807,67 @@ const Display = () => {
                               type="file"
                               className="sr-only"
                               onChange={handleFileChange}
-                              accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+                              accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf"
                             />
                           </label>
                           <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-gray-500">
-                          PNG, JPG, GIF, WEBP, SVG up to 10MB
+                          PNG, JPG, GIF, WEBP, SVG, PDF up to 10MB
                         </p>
                       </div>
-                    </div>
+                    </div> */}
+                    <label
+                      htmlFor="file-upload"
+                      className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer"
+                    >
+                      <div className="space-y-1 text-center">
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+
+                        <div className="flex text-sm text-gray-600 justify-center">
+                          <span className="relative bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                            Upload a file
+                          </span>
+                          <p className="pl-1">or drag and drop</p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, GIF, WEBP, SVG, PDF up to 4MB
+                        </p>
+
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
+                          accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf"
+                          onChange={(e) => {
+                            const selectedFile = e.target.files[0];
+                            if (selectedFile) {
+                              if (selectedFile.size > 4 * 1024 * 1024) {
+                                alert("File size exceeds 4MB limit");
+                                return;
+                              }
+                              setFile(selectedFile);
+                              setFileName(selectedFile.name);
+                            }
+                          }}
+                        />
+                      </div>
+                    </label>
+
                     <div className="mt-4 flex justify-center">
                       <button
                         onClick={handleUpload}
