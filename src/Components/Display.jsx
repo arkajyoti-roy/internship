@@ -496,7 +496,7 @@ const Display = () => {
                     </span>
                   </div>
 
-                  <label className="theme-switch">
+                  <label className="theme-switch hidden sm:block">
                     <input 
                       type="checkbox" 
                       className="theme-switch__checkbox"
@@ -595,7 +595,10 @@ const Display = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-              <label className="theme-switch md:hidden  " style={{marginLeft: "-293px"}}>
+              
+              <div className="w-full flex justify-between items-center">
+                <div>
+                  <label className="theme-switch md:hidden">
                     <input 
                       type="checkbox" 
                       className="theme-switch__checkbox"
@@ -620,7 +623,8 @@ const Display = () => {
                       </div>
                     </div>
                   </label>
-              <div className="flex space-x-2">
+                  </div>
+                  <div className="flex space-x-2">
                 <button
                   onClick={() => setViewMode("grid")}
                   className={`p-2 rounded-md transition-colors ${
@@ -669,6 +673,7 @@ const Display = () => {
                     />
                   </svg>
                 </button>
+                </div>
               </div>
             </div>
 
