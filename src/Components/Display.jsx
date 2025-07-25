@@ -47,6 +47,10 @@ const Display = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
+  
+  // Storage management states
+  const [totalStorageUsed, setTotalStorageUsed] = useState(0);
+  const STORAGE_LIMIT = 50 * 1024 * 1024; // 50MB in bytes
 
   useEffect(() => {
     // Listen for system theme changes
@@ -125,6 +129,21 @@ const Display = () => {
     return "unknown";
   };
 
+  // Helper function to format bytes
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  // Helper function to calculate total storage used
+  const calculateTotalStorage = (files) => {
+    return files.reduce((total, file) => total + (file.size || 0), 0);
+  };
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
@@ -132,6 +151,16 @@ const Display = () => {
       if (selectedFile.size > 4 * 1024 * 1024) {
         toast.error("File size exceeds 4MB limit", {
           position: "top-right",
+        });
+        return;
+      }
+
+      // Check if adding this file would exceed storage limit
+      if (totalStorageUsed + selectedFile.size > STORAGE_LIMIT) {
+        const remainingSpace = STORAGE_LIMIT - totalStorageUsed;
+        toast.error(`Storage limit exceeded! You have ${formatBytes(remainingSpace)} remaining space out of ${formatBytes(STORAGE_LIMIT)}`, {
+          position: "top-right",
+          autoClose: 5000,
         });
         return;
       }
@@ -177,6 +206,16 @@ const Display = () => {
           position: "top-right",
         }
       );
+      return;
+    }
+
+    // Final storage check before upload
+    if (totalStorageUsed + file.size > STORAGE_LIMIT) {
+      const remainingSpace = STORAGE_LIMIT - totalStorageUsed;
+      toast.error(`Storage limit exceeded! You have ${formatBytes(remainingSpace)} remaining space out of ${formatBytes(STORAGE_LIMIT)}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
       return;
     }
 
@@ -235,6 +274,7 @@ const Display = () => {
             fileName: fileName.trim(),
             fileUrl: url,
             fileType: getFileType(file),
+            fileSize: file.size, // Store file size in bytes
             timestamp: new Date().getTime(),
           });
 
@@ -280,12 +320,17 @@ const Display = () => {
           url: doc.data().fileUrl,
           name: doc.data().fileName,
           type: doc.data().fileType || "image", // Default to image for backward compatibility
+          size: doc.data().fileSize || 0, // Default to 0 for backward compatibility
           timestamp: doc.data().timestamp || 0,
         });
       });
 
       urls.sort((a, b) => b.timestamp - a.timestamp);
       setFileUrl(urls);
+      
+      // Calculate and update total storage used
+      const totalUsed = calculateTotalStorage(urls);
+      setTotalStorageUsed(totalUsed);
     } catch (error) {
       console.error("Error fetching files:", error);
       toast.error("Failed to load files", {
@@ -318,9 +363,14 @@ const Display = () => {
       }
 
       await deleteDoc(doc(db, "Files", file.id));
-      setFileUrl(fileUrl.filter((item) => item.id !== file.id));
+      const updatedFiles = fileUrl.filter((item) => item.id !== file.id);
+      setFileUrl(updatedFiles);
+      
+      // Update total storage used after deletion
+      const newTotalUsed = calculateTotalStorage(updatedFiles);
+      setTotalStorageUsed(newTotalUsed);
 
-      toast.success("File deleted successfully", {
+      toast.success(`File deleted successfully. ${formatBytes(file.size)} storage space released.`, {
         position: "top-right",
       });
     } catch (error) {
@@ -462,6 +512,9 @@ const Display = () => {
     }
   };
 
+  // Storage usage percentage for progress bar
+  const storagePercentage = (totalStorageUsed / STORAGE_LIMIT) * 100;
+
   return (
     <div
       className={`min-h-screen ${darkMode ? "dark bg-gray-900" : "bg-gray-50"}`}
@@ -593,6 +646,31 @@ const Display = () => {
           </header>
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Storage Usage Display */}
+            <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Storage Usage</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatBytes(totalStorageUsed)} / {formatBytes(STORAGE_LIMIT)} ({storagePercentage.toFixed(1)}%)
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    storagePercentage >= 90 ? 'bg-red-500' : 
+                    storagePercentage >= 75 ? 'bg-yellow-500' : 
+                    'bg-indigo-600'
+                  }`}
+                  style={{ width: `${Math.min(storagePercentage, 100)}%` }}
+                ></div>
+              </div>
+              {storagePercentage >= 90 && (
+                <p className="text-sm text-red-500 dark:text-red-400 mt-2">
+                  ⚠️ Storage almost full! Consider deleting some files to free up space.
+                </p>
+              )}
+            </div>
+
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
               <div className="relative w-full sm:w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -768,7 +846,7 @@ const Display = () => {
                               {item.name}
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                              {item.type} file
+                              {item.type} file • {formatBytes(item.size)}
                             </p>
                             <div className="mt-4 flex justify-between">
                               <button
@@ -833,7 +911,7 @@ const Display = () => {
                               {item.name}
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                              {item.type} file
+                              {item.type} file • {formatBytes(item.size)}
                             </p>
                           </div>
                           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
@@ -965,6 +1043,9 @@ const Display = () => {
                           File should be an image (.jpg, .jpeg, .png, .gif,
                           .webp, .svg) or PDF format.
                         </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          Available space: {formatBytes(STORAGE_LIMIT - totalStorageUsed)} / {formatBytes(STORAGE_LIMIT)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1019,6 +1100,20 @@ const Display = () => {
                       </div>
                     )}
 
+                    {/* Show selected file size */}
+                    {file && (
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          Selected file: <span className="font-medium">{file.name}</span> ({formatBytes(file.size)})
+                        </p>
+                        {totalStorageUsed + file.size > STORAGE_LIMIT && (
+                          <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                            ⚠️ This file exceeds your available storage space!
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* File upload */}
                     <label
                       htmlFor="file-upload"
@@ -1046,7 +1141,7 @@ const Display = () => {
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          PNG, JPG, GIF, WEBP, SVG, PDF up to 1MB
+                          PNG, JPG, GIF, WEBP, SVG, PDF up to 4MB
                         </p>
 
                         <input
@@ -1055,31 +1150,7 @@ const Display = () => {
                           type="file"
                           className="sr-only"
                           accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf"
-                          onChange={(e) => {
-                            const selectedFile = e.target.files[0];
-                            if (selectedFile) {
-                                if (selectedFile.size > 1 * 1024 * 1024) {
-                                toast.warning("File size exceeds 1MB limit");
-                                return;
-                              }
-                              setFile(selectedFile);
-                              setFileName(selectedFile.name);
-
-                              // Generate preview based on file type
-                              if (selectedFile.type.startsWith("image/")) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setPreviewUrl(reader.result);
-                                };
-                                reader.readAsDataURL(selectedFile);
-                              } else if (
-                                selectedFile.type === "application/pdf"
-                              ) {
-                                const url = URL.createObjectURL(selectedFile);
-                                setPreviewUrl(url);
-                              }
-                            }
-                          }}
+                          onChange={handleFileChange}
                         />
                       </div>
                     </label>
@@ -1088,7 +1159,7 @@ const Display = () => {
                       <button
                         onClick={handleUpload}
                         className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!file}
+                        disabled={!file || (totalStorageUsed + (file?.size || 0) > STORAGE_LIMIT)}
                       >
                         Upload
                       </button>
