@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
-// import "./ThemeSwitch.css";
 import {
   collection,
   addDoc,
@@ -206,7 +205,7 @@ const Display = () => {
 
     if (!allowedFormats.includes(file.type)) {
       toast.error(
-        "Invalid file format. Please upload an image (.jpg, .jpeg, .png, .gif, .webp, .svg) or PDF file.",
+        "Invalid file format. Please upload an image or PDF file.",
         {
           position: "top-right",
         }
@@ -563,9 +562,7 @@ const Display = () => {
                     <span className="text-base font-medium text-gray-900 dark:text-gray-100">
                       Hi,{" "}
                     </span>
-                    {/* <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
-                      {userDetails.name}!
-                    </span> */}
+                  
                     <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
                       {userDetails.name.length > 10
                         ? `${userDetails.name.slice(0, 10)}...`
