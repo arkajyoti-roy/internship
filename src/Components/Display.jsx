@@ -567,8 +567,8 @@ const Display = () => {
                       {userDetails.name}!
                     </span> */}
                     <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
-                      {userDetails.name.length > 9
-                        ? `${userDetails.name.slice(0, 9)}...`
+                      {userDetails.name.length > 10
+                        ? `${userDetails.name.slice(0, 10)}...`
                         : userDetails.name}
                     </span>
                   </div>
