@@ -47,7 +47,7 @@ const Display = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
-  
+
   // Storage management states
   const [totalStorageUsed, setTotalStorageUsed] = useState(0);
   const STORAGE_LIMIT = 50 * 1024 * 1024; // 50MB in bytes
@@ -131,12 +131,12 @@ const Display = () => {
 
   // Helper function to format bytes
   const formatBytes = (bytes, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
   };
 
   // Helper function to calculate total storage used
@@ -158,10 +158,15 @@ const Display = () => {
       // Check if adding this file would exceed storage limit
       if (totalStorageUsed + selectedFile.size > STORAGE_LIMIT) {
         const remainingSpace = STORAGE_LIMIT - totalStorageUsed;
-        toast.error(`Storage limit exceeded! You have ${formatBytes(remainingSpace)} remaining space out of ${formatBytes(STORAGE_LIMIT)}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        toast.error(
+          `Storage limit exceeded! You have ${formatBytes(
+            remainingSpace
+          )} remaining space out of ${formatBytes(STORAGE_LIMIT)}`,
+          {
+            position: "top-right",
+            autoClose: 5000,
+          }
+        );
         return;
       }
 
@@ -212,10 +217,15 @@ const Display = () => {
     // Final storage check before upload
     if (totalStorageUsed + file.size > STORAGE_LIMIT) {
       const remainingSpace = STORAGE_LIMIT - totalStorageUsed;
-      toast.error(`Storage limit exceeded! You have ${formatBytes(remainingSpace)} remaining space out of ${formatBytes(STORAGE_LIMIT)}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
+      toast.error(
+        `Storage limit exceeded! You have ${formatBytes(
+          remainingSpace
+        )} remaining space out of ${formatBytes(STORAGE_LIMIT)}`,
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
       return;
     }
 
@@ -327,7 +337,7 @@ const Display = () => {
 
       urls.sort((a, b) => b.timestamp - a.timestamp);
       setFileUrl(urls);
-      
+
       // Calculate and update total storage used
       const totalUsed = calculateTotalStorage(urls);
       setTotalStorageUsed(totalUsed);
@@ -365,14 +375,19 @@ const Display = () => {
       await deleteDoc(doc(db, "Files", file.id));
       const updatedFiles = fileUrl.filter((item) => item.id !== file.id);
       setFileUrl(updatedFiles);
-      
+
       // Update total storage used after deletion
       const newTotalUsed = calculateTotalStorage(updatedFiles);
       setTotalStorageUsed(newTotalUsed);
 
-      toast.success(`File deleted successfully. ${formatBytes(file.size)} storage space released.`, {
-        position: "top-right",
-      });
+      toast.success(
+        `File deleted successfully. ${formatBytes(
+          file.size
+        )} storage space released.`,
+        {
+          position: "top-right",
+        }
+      );
     } catch (error) {
       console.error("Error deleting file:", error);
       toast.error("Error deleting file: " + error.message, {
@@ -548,8 +563,13 @@ const Display = () => {
                     <span className="text-base font-medium text-gray-900 dark:text-gray-100">
                       Hi,{" "}
                     </span>
-                    <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
+                    {/* <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
                       {userDetails.name}!
+                    </span> */}
+                    <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
+                      {userDetails.name.length > 9
+                        ? `${userDetails.name.slice(0, 9)}...`
+                        : userDetails.name}
                     </span>
                   </div>
                 </div>
@@ -649,24 +669,30 @@ const Display = () => {
             {/* Storage Usage Display */}
             <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Storage Usage</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Storage Usage
+                </h3>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {formatBytes(totalStorageUsed)} / {formatBytes(STORAGE_LIMIT)} ({storagePercentage.toFixed(1)}%)
+                  {formatBytes(totalStorageUsed)} / {formatBytes(STORAGE_LIMIT)}{" "}
+                  ({storagePercentage.toFixed(1)}%)
                 </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div 
+                <div
                   className={`h-3 rounded-full transition-all duration-300 ${
-                    storagePercentage >= 90 ? 'bg-red-500' : 
-                    storagePercentage >= 75 ? 'bg-yellow-500' : 
-                    'bg-indigo-600'
+                    storagePercentage >= 90
+                      ? "bg-red-500"
+                      : storagePercentage >= 75
+                      ? "bg-yellow-500"
+                      : "bg-indigo-600"
                   }`}
                   style={{ width: `${Math.min(storagePercentage, 100)}%` }}
                 ></div>
               </div>
               {storagePercentage >= 90 && (
                 <p className="text-sm text-red-500 dark:text-red-400 mt-2">
-                  ⚠️ Storage almost full! Consider deleting some files to free up space.
+                  ⚠️ Storage almost full! Consider deleting some files to free
+                  up space.
                 </p>
               )}
             </div>
@@ -1044,7 +1070,9 @@ const Display = () => {
                           .webp, .svg) or PDF format.
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          Available space: {formatBytes(STORAGE_LIMIT - totalStorageUsed)} / {formatBytes(STORAGE_LIMIT)}
+                          Available space:{" "}
+                          {formatBytes(STORAGE_LIMIT - totalStorageUsed)} /{" "}
+                          {formatBytes(STORAGE_LIMIT)}
                         </p>
                       </div>
                     </div>
@@ -1104,7 +1132,9 @@ const Display = () => {
                     {file && (
                       <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
                         <p className="text-sm text-blue-700 dark:text-blue-300">
-                          Selected file: <span className="font-medium">{file.name}</span> ({formatBytes(file.size)})
+                          Selected file:{" "}
+                          <span className="font-medium">{file.name}</span> (
+                          {formatBytes(file.size)})
                         </p>
                         {totalStorageUsed + file.size > STORAGE_LIMIT && (
                           <p className="text-sm text-red-600 dark:text-red-400 mt-1">
@@ -1159,7 +1189,10 @@ const Display = () => {
                       <button
                         onClick={handleUpload}
                         className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!file || (totalStorageUsed + (file?.size || 0) > STORAGE_LIMIT)}
+                        disabled={
+                          !file ||
+                          totalStorageUsed + (file?.size || 0) > STORAGE_LIMIT
+                        }
                       >
                         Upload
                       </button>
