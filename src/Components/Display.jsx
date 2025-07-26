@@ -54,9 +54,8 @@ const Display = () => {
   // Preview modal states
   const [previewModal, setPreviewModal] = useState({
     isOpen: false,
-    item: null
+    item: null,
   });
-  const [touchTimer, setTouchTimer] = useState(null);
 
   useEffect(() => {
     // Listen for system theme changes
@@ -154,30 +153,33 @@ const Display = () => {
   const openPreview = (item) => {
     setPreviewModal({
       isOpen: true,
-      item: item
+      item: item,
     });
   };
 
   const closePreview = () => {
     setPreviewModal({
       isOpen: false,
-      item: null
+      item: null,
     });
   };
 
-  // Touch handlers for mobile tap and hold
+  // Touch handlers for double tap
+  const [lastTap, setLastTap] = useState(0);
+  const DOUBLE_TAP_DELAY = 300; // 300ms between taps
+
   const handleTouchStart = (item) => {
-    const timer = setTimeout(() => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+
+    if (tapLength < DOUBLE_TAP_DELAY && tapLength > 0) {
       openPreview(item);
-    }, 500); // 500ms for tap and hold
-    setTouchTimer(timer);
+    }
+    setLastTap(currentTime);
   };
 
   const handleTouchEnd = () => {
-    if (touchTimer) {
-      clearTimeout(touchTimer);
-      setTouchTimer(null);
-    }
+    // No longer needed for double tap, but keeping for interface consistency
   };
 
   const handleFileChange = (e) => {
@@ -241,12 +243,9 @@ const Display = () => {
     ];
 
     if (!allowedFormats.includes(file.type)) {
-      toast.error(
-        "Invalid file format. Please upload an image or PDF file.",
-        {
-          position: "top-right",
-        }
-      );
+      toast.error("Invalid file format. Please upload an image or PDF file.", {
+        position: "top-right",
+      });
       return;
     }
 
@@ -574,14 +573,19 @@ const Display = () => {
             className="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
             onClick={onClose}
           ></div>
-          
-          <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-          
+
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
+            &#8203;
+          </span>
+
           <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
             <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                  {item.name}
+                  {/* {item.name} */}
+                  {window.innerWidth <= 768 && item.name.length > 55
+                    ? `${item.name.slice(0, 55)}...`
+                    : item.name}
                 </h3>
                 <button
                   onClick={onClose}
@@ -602,14 +606,15 @@ const Display = () => {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="w-full h-96 sm:h-[500px] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                 {renderFilePreview(item)}
               </div>
-              
+
               <div className="mt-4 flex justify-between items-center">
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  <span className="capitalize">{item.type} file</span> • {formatBytes(item.size)}
+                  <span className="capitalize">{item.type} file</span> •{" "}
+                  {formatBytes(item.size)}
                 </div>
                 <div className="flex space-x-3">
                   <button
@@ -677,7 +682,7 @@ const Display = () => {
                     <span className="text-base font-medium text-gray-900 dark:text-gray-100">
                       Hi,{" "}
                     </span>
-                  
+
                     <span className="text-base font-bold text-gray-900 dark:text-white ml-1">
                       {userDetails.name.length > 10
                         ? `${userDetails.name.slice(0, 10)}...`
@@ -1004,7 +1009,6 @@ const Display = () => {
                                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                 />
                               </svg>
-                              
                             </button>
                           </div>
                           <div className="p-4">
@@ -1041,7 +1045,7 @@ const Display = () => {
                                 </svg>
                                 Download
                               </button>
-                              
+
                               {/* Delete button */}
                               <button
                                 onClick={() => handleDelete(item)}
@@ -1170,10 +1174,10 @@ const Display = () => {
           </main>
 
           {/* Preview Modal */}
-          <PreviewModal 
-            isOpen={previewModal.isOpen} 
-            item={previewModal.item} 
-            onClose={closePreview} 
+          <PreviewModal
+            isOpen={previewModal.isOpen}
+            item={previewModal.item}
+            onClose={closePreview}
           />
 
           <footer className="sticky-footer bg-white dark:bg-gray-800 mt-10 border-t border-gray-200 dark:border-gray-700">
