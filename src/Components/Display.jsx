@@ -51,6 +51,13 @@ const Display = () => {
   const [totalStorageUsed, setTotalStorageUsed] = useState(0);
   const STORAGE_LIMIT = 50 * 1024 * 1024; // 50MB in bytes
 
+  // Preview modal states
+  const [previewModal, setPreviewModal] = useState({
+    isOpen: false,
+    item: null
+  });
+  const [touchTimer, setTouchTimer] = useState(null);
+
   useEffect(() => {
     // Listen for system theme changes
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -141,6 +148,36 @@ const Display = () => {
   // Helper function to calculate total storage used
   const calculateTotalStorage = (files) => {
     return files.reduce((total, file) => total + (file.size || 0), 0);
+  };
+
+  // Preview functions
+  const openPreview = (item) => {
+    setPreviewModal({
+      isOpen: true,
+      item: item
+    });
+  };
+
+  const closePreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      item: null
+    });
+  };
+
+  // Touch handlers for mobile tap and hold
+  const handleTouchStart = (item) => {
+    const timer = setTimeout(() => {
+      openPreview(item);
+    }, 500); // 500ms for tap and hold
+    setTouchTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setTouchTimer(null);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -526,6 +563,84 @@ const Display = () => {
     }
   };
 
+  // Preview Modal Component
+  const PreviewModal = ({ isOpen, item, onClose }) => {
+    if (!isOpen || !item) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
+            onClick={onClose}
+          ></div>
+          
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+          
+          <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                  {item.name}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="bg-gray-100 dark:bg-gray-700 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 focus:outline-none p-2"
+                >
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="w-full h-96 sm:h-[500px] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                {renderFilePreview(item)}
+              </div>
+              
+              <div className="mt-4 flex justify-between items-center">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="capitalize">{item.type} file</span> • {formatBytes(item.size)}
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => handleDownload(item.url, item.name)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Storage usage percentage for progress bar
   const storagePercentage = (totalStorageUsed / STORAGE_LIMIT) * 100;
 
@@ -857,9 +972,40 @@ const Display = () => {
                         <div
                           key={index}
                           className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow duration-300"
+                          onTouchStart={() => handleTouchStart(item)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchCancel={handleTouchEnd}
                         >
-                          <div className="h-48 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+                          <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-lg group">
                             {renderFilePreview(item)}
+                            {/* Preview button overlay - only show on desktop */}
+                            <button
+                              onClick={() => openPreview(item)}
+                              className="hidden md:flex absolute top-2 right-2 items-center justify-center w-8 h-8 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full opacity-0 opacity-100 transition-opacity duration-200"
+                              title="Preview"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                              
+                            </button>
                           </div>
                           <div className="p-4">
                             <h3
@@ -872,6 +1018,7 @@ const Display = () => {
                               {item.type} file • {formatBytes(item.size)}
                             </p>
                             <div className="mt-4 flex justify-between">
+                              {/* Download button */}
                               <button
                                 onClick={() =>
                                   handleDownload(item.url, item.name)
@@ -894,6 +1041,8 @@ const Display = () => {
                                 </svg>
                                 Download
                               </button>
+                              
+                              {/* Delete button */}
                               <button
                                 onClick={() => handleDelete(item)}
                                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
@@ -922,9 +1071,39 @@ const Display = () => {
                         <div
                           key={index}
                           className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center hover:shadow-md transition-shadow duration-300"
+                          onTouchStart={() => handleTouchStart(item)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchCancel={handleTouchEnd}
                         >
-                          <div className="w-full sm:w-20 h-20 mb-4 sm:mb-0 sm:mr-4 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0">
+                          <div className="relative w-full sm:w-20 h-20 mb-4 sm:mb-0 sm:mr-4 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0 group">
                             {renderFilePreview(item)}
+                            {/* Preview button overlay - only show on desktop */}
+                            <button
+                              onClick={() => openPreview(item)}
+                              className="hidden md:flex absolute top-1 right-1 items-center justify-center w-6 h-6 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              title="Preview"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            </button>
                           </div>
                           <div className="flex-grow">
                             <h3
@@ -989,6 +1168,13 @@ const Display = () => {
               </>
             )}
           </main>
+
+          {/* Preview Modal */}
+          <PreviewModal 
+            isOpen={previewModal.isOpen} 
+            item={previewModal.item} 
+            onClose={closePreview} 
+          />
 
           <footer className="sticky-footer bg-white dark:bg-gray-800 mt-10 border-t border-gray-200 dark:border-gray-700">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -1214,4 +1400,5 @@ const Display = () => {
     </div>
   );
 };
+
 export default Display;
